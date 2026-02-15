@@ -39,6 +39,7 @@ from ..primitives import (
     PrimitiveCall,
     PrimitiveType,
     PulseVoltageSourceParams,
+    PwlVoltageSourceParams,
 )
 
 
@@ -195,6 +196,7 @@ class ProtoExporter:
                     prim_map = {
                         "DcVoltageSource": "vdc",
                         "PulseVoltageSource": "vpulse",
+                        "PwlVoltageSource": "vpwl",
                         "SineVoltageSource": "vsin",
                         "CurrentSource": "isource",
                         "IdealResistor": "resistor",
@@ -325,6 +327,10 @@ def export_primitive_params(params: Any) -> Dict[str, Optional[Prefixed]]:
             tf=params.fall,
             tpw=params.width,
             tper=params.period,
+        )
+    if isinstance(params, PwlVoltageSourceParams):
+        return dict(
+            wave=params.wave,
         )
 
     # For everything else, pass along the values name-by-name as a dictionary.

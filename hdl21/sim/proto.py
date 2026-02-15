@@ -223,7 +223,7 @@ class SimProtoExporter:
         return vsp.MonteInput(
             analysis_name=analysis_name,
             npts=monte.npts,
-            seed=0,  # FIXME: programmable seeds?
+            seed=0 if monte.seed is None else monte.seed,
             an=[self.export_analysis(a) for a in monte.inner],
             ctrls=[],  # FIXME: analysis-specific controls
         )

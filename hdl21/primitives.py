@@ -533,6 +533,31 @@ Vpulse = PulseVoltageSource
 
 
 @paramclass
+class PwlVoltageSourceParams:
+    """`PwlVoltageSource` Parameters"""
+
+    wave = Param(
+        dtype=str,
+        default="",
+        desc="PWL waveform as time/value pairs, e.g. '0 0 1n 1.2'",
+    )
+
+
+PwlVoltageSource = _add(
+    prim=Primitive(
+        name="PwlVoltageSource",
+        desc="Piecewise-linear Voltage Source",
+        port_list=copy.deepcopy(PassivePorts),
+        paramtype=PwlVoltageSourceParams,
+        primtype=PrimitiveType.IDEAL,
+    ),
+    aliases=["Vpwl"],
+)
+
+Vpwl = PwlVoltageSource
+
+
+@paramclass
 class SineVoltageSourceParams:
     """`SineVoltageSource` Parameters"""
 

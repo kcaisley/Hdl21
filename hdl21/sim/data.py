@@ -229,6 +229,7 @@ class MonteCarlo:
 
     inner: List["Analysis"]  # Inner Analyses
     npts: int  # Number of points
+    seed: Optional[int] = None  # Optional random-number seed
     name: Optional[str] = None  # Optional analysis name
 
     @property
