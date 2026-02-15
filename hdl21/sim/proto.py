@@ -150,6 +150,7 @@ class SimProtoExporter:
             tstep=export_float(tran.tstep),
             ic={},  # FIXME: initial conditions
             ctrls=[],  # FIXME: analysis-specific controls
+            noise=tran.noise,  # Enable noise (Spectre: isnoisy=yes)
         )
 
     def export_noise(self, noise: data.Noise) -> vsp.NoiseInput:
@@ -318,11 +319,11 @@ def export_save(save: data.Save) -> vsp.Save:
         return vsp.Save(mode=mode)
     if isinstance(save.targ, Signal):
         signal = save.targ.name
-    elif isinstance(save.targ, List[Signal]):
+    elif isinstance(save.targ, list) and all(isinstance(s, Signal) for s in save.targ):
         signal = ",".join([s.name for s in save.targ])
     elif isinstance(save.targ, str):
         signal = save.targ
-    elif isinstance(save.targ, List[str]):
+    elif isinstance(save.targ, list) and all(isinstance(s, str) for s in save.targ):
         signal = ",".join([s for s in save.targ])
     else:
         raise TypeError

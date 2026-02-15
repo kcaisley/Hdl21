@@ -179,6 +179,7 @@ class Tran:
     tstop: Scalar  # Stop time
     tstep: Optional[Scalar] = None  # Optional time-step recommendation
     name: Optional[str] = None  # Optional analysis name
+    noise: bool = False  # Enable noise in transient (Spectre: isnoisy=yes)
 
     @property
     def tp(self) -> AnalysisType:
