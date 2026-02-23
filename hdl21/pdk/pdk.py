@@ -153,7 +153,7 @@ def compile(
             raise RuntimeError(msg)
     elif isinstance(pdk, ModuleType):
         # Ensure that `pdk` is registered and checked as a valid PDK module
-        _mgr.register(pdk)
+        register(pdk)
 
     if pdk is None:  # Check for no-default-available cases
         if not len(_mgr.modules):
