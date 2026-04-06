@@ -58,9 +58,9 @@ else:  # _pydantic_major_version==2
     from pydantic_core import to_jsonable_python as pydantic_json_encoder
 
     PYDANTIC_V2 = True
-    OurBaseConfig = dict(allow_extra="forbid", validate_default=True)
+    OurBaseConfig = dict(extra="forbid", validate_default=True)
     AllowArbConfig = dict(
-        allow_extra="forbid", validate_default=True, arbitrary_types_allowed=True
+        extra="forbid", validate_default=True, arbitrary_types_allowed=True
     )
 
     def _update_forward_refs():
