@@ -197,6 +197,7 @@ class ProtoExporter:
                         "DcVoltageSource": "vdc",
                         "PulseVoltageSource": "vpulse",
                         "PwlVoltageSource": "vpwl",
+                        "BitVoltageSource": "vbit",
                         "SineVoltageSource": "vsin",
                         "CurrentSource": "isource",
                         "IdealResistor": "resistor",

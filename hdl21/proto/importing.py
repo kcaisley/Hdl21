@@ -238,6 +238,7 @@ def import_vlsir_primitive(pref: vlsir.utils.QualifiedName) -> Primitive:
         "vdc": "DcVoltageSource",
         "vpulse": "PulseVoltageSource",
         "vpwl": "PwlVoltageSource",
+        "vbit": "BitVoltageSource",
         "vsin": "SineVoltageSource",
         "isource": "CurrentSource",
         "resistor": "IdealResistor",

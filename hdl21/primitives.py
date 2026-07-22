@@ -42,6 +42,9 @@ Summary of the content of the primitive library:
 | PhysicalShort                  | Short-Circuit/ Net-Tie            | PHYSICAL | Short                                 | p, n         |
 | DcVoltageSource                | DC Voltage Source                 | IDEAL    | V, Vdc, Vsrc                          | p, n         |
 | PulseVoltageSource             | Pulse Voltage Source              | IDEAL    | Vpu, Vpulse                           | p, n         |
+| PwlVoltageSource               | Piecewise-linear Voltage Source   | IDEAL    | Vpwl                                  | p, n         |
+| SineVoltageSource              | Sine Voltage Source               | IDEAL    | Vsin                                  | p, n         |
+| BitVoltageSource               | Digital Bit-Pattern Voltage Source| IDEAL    | Vbit                                  | p, n         |
 | CurrentSource                  | Ideal DC Current Source           | IDEAL    | I, Idc, Isrc                          | p, n         |
 | VoltageControlledVoltageSource | Voltage Controlled Voltage Source | IDEAL    | Vcvs, VCVS                            | p, n, cp, cn |
 | CurrentControlledVoltageSource | Current Controlled Voltage Source | IDEAL    | Ccvs, CCVS                            | p, n, cp, cn |
@@ -555,6 +558,46 @@ PwlVoltageSource = _add(
 )
 
 Vpwl = PwlVoltageSource
+
+
+@paramclass
+class BitVoltageSourceParams:
+    """Digital bit-pattern voltage-source parameters.
+
+    This source maps directly to Spectre's ``vsource type=bit``. ``period`` is
+    the duration of one bit. ``rptstart`` is one-based, matching Spectre, and a
+    negative ``rpttimes`` repeats indefinitely.
+    """
+
+    data = Param(dtype=str, desc="Bit pattern containing Spectre states 0, 1, m, or z")
+    period = Param(dtype=Scalar, desc="Bit period (s)")
+    val0 = Param(dtype=Scalar, default=0, desc="Voltage for a zero bit (V)")
+    val1 = Param(dtype=Scalar, default=1, desc="Voltage for a one bit (V)")
+    delay = Param(dtype=Scalar, default=0, desc="Delay before the first bit (s)")
+    rise = Param(dtype=Optional[Scalar], default=None, desc="Rise time (s)")
+    fall = Param(dtype=Optional[Scalar], default=None, desc="Fall time (s)")
+    rptstart = Param(
+        dtype=int, default=1, desc="One-based first bit of the repeated suffix"
+    )
+    rpttimes = Param(
+        dtype=int,
+        default=0,
+        desc="Repeat count; a negative value repeats indefinitely",
+    )
+
+
+BitVoltageSource = _add(
+    prim=Primitive(
+        name="BitVoltageSource",
+        desc="Digital Bit-Pattern Voltage Source",
+        port_list=copy.deepcopy(PassivePorts),
+        paramtype=BitVoltageSourceParams,
+        primtype=PrimitiveType.IDEAL,
+    ),
+    aliases=["Vbit"],
+)
+
+Vbit = BitVoltageSource
 
 
 @paramclass

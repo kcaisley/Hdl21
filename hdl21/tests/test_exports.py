@@ -125,6 +125,18 @@ def test_ideal_primitives():
             phase=0 * h.prefix.m,
         )
         vsin = h.Vsin(_vsin)(p=p, n=n)
+        _vbit = h.Vbit.Params(
+            data="0011010",
+            period=1 * h.prefix.u,
+            val0=0,
+            val1=1.2,
+            delay=1 * h.prefix.n,
+            rise=3 * h.prefix.n,
+            fall=3 * h.prefix.n,
+            rptstart=1,
+            rpttimes=0,
+        )
+        vbit = h.Vbit(_vbit)(p=p, n=n)
         _idc = h.Idc.Params(dc=0 * h.prefix.m)
         idc = h.Idc(_idc)(p=p, n=n)
         _vcvs = h.Vcvs.Params(gain=1 * h.prefix.m)
@@ -138,6 +150,42 @@ def test_ideal_primitives():
 
     ppkg = h.to_proto(HasPrims)
     ns = h.from_proto(ppkg)
+
+
+def test_spectre_bit_voltage_source():
+    """Netlist HDL21's bit source using Spectre's native syntax."""
+
+    @h.module
+    class BitSourceTb:
+        out = h.Signal()
+        vss = h.Signal()
+        source = h.Vbit(
+            data="0011010",
+            period=1 * h.prefix.u,
+            val0=0,
+            val1=1.2,
+            delay=1 * h.prefix.n,
+            rise=3 * h.prefix.n,
+            fall=3 * h.prefix.n,
+            rptstart=1,
+            rpttimes=0,
+        )(p=out, n=vss)
+
+    netlist = StringIO()
+    h.netlist(BitSourceTb, netlist, fmt="spectre")
+    text = netlist.getvalue()
+
+    assert "vsource" in text
+    assert "type=bit" in text
+    assert 'data="0011010"' in text
+    assert "period=1u" in text
+    assert "val0=0" in text
+    assert "val1=1.2" in text
+    assert "delay=1n" in text
+    assert "rise=3n" in text
+    assert "fall=3n" in text
+    assert "rptstart=1" in text
+    assert "rpttimes=0" in text
 
 
 def test_proto1():
