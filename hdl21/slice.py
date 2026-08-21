@@ -71,12 +71,14 @@ class Slice:
         return f"Slice(parent={self.parent}, index={self.index})"
 
     def __eq__(self, other) -> bool:
-        # Identity is equality
-        return other is self
+        if not isinstance(other, Slice):
+            return False
+        return self.parent is other.parent and _index_key(self.index) == _index_key(
+            other.index
+        )
 
     def __hash__(self) -> bool:
-        # Identity is equality
-        return hash(id(self))
+        return hash((id(self.parent), _index_key(self.index)))
 
 
 @datatype
@@ -91,65 +93,43 @@ class SliceInner:
     width: int
 
 
+def _index_key(index: Union[int, slice]):
+    """Create an equality/ hash key without requiring the parent width."""
+
+    if isinstance(index, int):
+        return index
+    return (index.start, index.stop, index.step)
+
+
 def _slice_inner(slize: Slice) -> SliceInner:
     """Calculate the inner resolved fields for `slize`"""
 
     parent = slize.parent
     index = slize.index
+    from .elab.helpers.width import width
+
+    parent_width = width(parent)
 
     if isinstance(index, int):
-        if index >= parent.width:
+        if index >= parent_width or index < -parent_width:
             raise ValueError(f"Out-of-bounds index {index} into {parent}")
         if index < 0:
-            index += parent.width
+            index += parent_width
         return SliceInner(top=index + 1, bot=index, step=1, width=1)
 
     if isinstance(index, slice):
-        # Note these `slice` attributes are descriptor-things, and they get weird, fast.
-        # Extracting their three index fields the most-hardest way via `__getattribute__` seems to work cleanest.
-        start = slice.__getattribute__(index, "start")
-        stop = slice.__getattribute__(index, "stop")
-        step = slice.__getattribute__(index, "step")
-
-        step = 1 if step is None else step
-        if step == 0:
-            raise ValueError(f"slice step cannot be zero")
-        elif step < 0:
-            # Here `top` gets a "+1" since `start` is *inclusive*, while `bot` gets "+1" as `stop` is *exclusive*.
-            top = (
-                parent.width
-                if start is None
-                else start + 1
-                if start >= 0
-                else parent.width + start + 1
-            )
-            bot = (
-                0
-                if stop is None
-                else stop + 1
-                if stop >= 0
-                else parent.width + stop + 1
-            )
-            # Align bot with the step
-            bot += (top - bot) % abs(step)
-        else:
-            # Here `start` and `stop` match `top` and `bot`'s inclusive/exclusivity.
-            # No need to add any offsets.
-            top = (
-                parent.width
-                if stop is None
-                else stop
-                if stop >= 0
-                else parent.width + stop
-            )
-            bot = 0 if start is None else start if start >= 0 else parent.width + start
-            # Align top with the step
-            top -= (top - bot) % step
-
-        width = (top - bot) // step
-
-        # Create and return our Slice. More checks are done in its constructor.
-        return SliceInner(top=top, bot=bot, step=step, width=width)
+        start, stop, step = index.indices(parent_width)
+        indices = range(start, stop, step)
+        if not indices:
+            raise ValueError(f"Empty slice {index} into {parent}")
+        first = indices[0]
+        last = indices[-1]
+        return SliceInner(
+            top=max(first, last) + 1,
+            bot=min(first, last),
+            step=step,
+            width=len(indices),
+        )
 
     # Shouldn't be reachable, but blow up if we (somehow) get here.
     raise TypeError("Internal Error: Slice index should be an int or (python) slice")

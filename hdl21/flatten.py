@@ -7,7 +7,7 @@ See function `flatten()` for details.
 import copy
 from pydantic.dataclasses import dataclass
 from dataclasses import field, replace
-from typing import Dict, Generator, List, Optional
+from typing import Any, Dict, Generator, Iterator, List, Optional
 
 import hdl21 as h
 from .signal import _copy_to_internal
@@ -35,7 +35,7 @@ class FlattenedInstance:
 
     inst: h.Instance
     path: List[h.Instance] = field(default_factory=list)
-    conns: Dict[str, h.Signal] = field(default_factory=dict)
+    conns: Dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
         # Assert that this instance's target is either a primitive, or external
@@ -55,7 +55,7 @@ class FlattenedInstance:
 def walk(
     m: h.Module,
     parents: List[h.Instance],
-    conns: Optional[Dict[str, h.Signal]] = None,
+    conns: Optional[Dict[str, Any]] = None,
 ) -> Generator[FlattenedInstance, None, None]:
     if conns is None:
         conns = {**m.signals, **m.ports}
@@ -63,36 +63,73 @@ def walk(
         new_conns = {}
         new_parents = parents + [inst]
         for src_port_name, sig in inst.conns.items():
-            if isinstance(sig, h.Signal):
-                key = sig.name
-            elif isinstance(sig, (h.Slice, h.Concat)):
-                msg = f"Flattening `Slice` and `Concat` is not (yet) supported"
-                raise NotImplementedError(msg)
-            elif isinstance(sig, (h.PortRef, h.BundleInstance, h.AnonymousBundle)):
-                # This shouldn't happen in normal use, but could in principle if
-                # someone e.g. calls this `walk` function directly.
-                msg = f"Error: {sig} should not have reached this stage in flattening"
-                raise RuntimeError(msg)
-            else:
-                raise TypeError(f"Invalid connection {sig}")
-
-            new_sig_name = ":".join([p.name for p in parents] + [key])
-            if key in conns:
-                target_sig = conns[key]
-            elif key in m.signals:
-                target_sig = replace(
-                    _copy_to_internal(m.signals[key]), name=new_sig_name
-                )
-            elif key in m.ports:
-                target_sig = replace(_copy_to_internal(m.ports[key]), name=new_sig_name)
-            else:
-                raise ValueError(f"signal {key} not found")
-            new_conns[src_port_name] = target_sig
+            new_conns[src_port_name] = _map_connection(sig, m, parents, conns)
 
         if isinstance(inst.of, h.PrimitiveCall):
             yield FlattenedInstance(inst, new_parents, new_conns)
         else:
             yield from walk(inst.of, new_parents, new_conns)
+
+
+def _map_connection(conn, m, parents, conns):
+    """Map one module-local connection into the flattened parent namespace."""
+
+    if isinstance(conn, h.Signal):
+        key = conn.name
+        if key in conns:
+            return conns[key]
+
+        new_name = ":".join([parent.name for parent in parents] + [key])
+        if key in m.signals:
+            return replace(_copy_to_internal(m.signals[key]), name=new_name)
+        if key in m.ports:
+            return replace(_copy_to_internal(m.ports[key]), name=new_name)
+        raise ValueError(f"signal {key} not found")
+
+    if isinstance(conn, h.Slice):
+        from .elab.passes.slices import _resolve_sliceable
+
+        mapped = _map_connection(conn.parent, m, parents, conns)[conn.index]
+        return _resolve_sliceable(mapped)
+
+    if isinstance(conn, h.Concat):
+        return h.Concat(
+            *[_map_connection(part, m, parents, conns) for part in conn.parts]
+        )
+
+    if isinstance(conn, (h.PortRef, h.BundleInstance, h.AnonymousBundle)):
+        msg = f"Error: {conn} should not have reached this stage in flattening"
+        raise RuntimeError(msg)
+    raise TypeError(f"Invalid connection {conn}")
+
+
+def _connection_signals(conn) -> Iterator[h.Signal]:
+    """Yield the concrete Signals underlying a connection."""
+
+    if isinstance(conn, h.Signal):
+        yield conn
+    elif isinstance(conn, h.Slice):
+        yield from _connection_signals(conn.parent)
+    elif isinstance(conn, h.Concat):
+        for part in conn.parts:
+            yield from _connection_signals(part)
+    else:
+        raise TypeError(f"Invalid flattened connection {conn}")
+
+
+def _rebase_connection(conn, module: h.Module):
+    """Rebuild a connection from Signals owned by the flattened module."""
+
+    if isinstance(conn, h.Signal):
+        return _find_signal_or_port(module, conn.name)
+    if isinstance(conn, h.Slice):
+        from .elab.passes.slices import _resolve_sliceable
+
+        rebased = _rebase_connection(conn.parent, module)[conn.index]
+        return _resolve_sliceable(rebased)
+    if isinstance(conn, h.Concat):
+        return h.Concat(*[_rebase_connection(part, module) for part in conn.parts])
+    raise TypeError(f"Invalid flattened connection {conn}")
 
 
 def _find_signal_or_port(m: h.Module, name: str) -> h.Signal:
@@ -182,17 +219,16 @@ def flatten(m: h.Instantiable) -> h.Instantiable:
 
     # add all signals to the root level
     for n in nodes:
-        for sig in n.conns.values():
-            sig_name = sig.name
-            if sig_name not in new_module.ports:
-                new_module.add(copy.copy(sig))
+        for conn in n.conns.values():
+            for sig in _connection_signals(conn):
+                if sig.name not in new_module.ports and sig.name not in new_module.signals:
+                    new_module.add(copy.copy(sig))
 
     # add all connections to the root level with names resolved
     for n in nodes:
         new_inst = new_module.add(n.inst.of(), name=n.make_name())
 
-        for src_port_name, sig in n.conns.items():
-            matching_sig = _find_signal_or_port(new_module, sig.name)
-            new_inst.connect(src_port_name, matching_sig)
+        for src_port_name, conn in n.conns.items():
+            new_inst.connect(src_port_name, _rebase_connection(conn, new_module))
 
     return new_module

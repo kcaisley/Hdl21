@@ -58,5 +58,11 @@ def _slice(*, parent: "Sliceable", index: Union[int, slice]) -> "Slice":
         raise TypeError
 
     slize = Slice(parent=parent, index=index)
+    # Validate slices of concrete Signals eagerly. More abstract sliceable
+    # objects, such as unresolved PortRefs, retain lazy width resolution.
+    from .signal import Signal
+
+    if isinstance(parent, Signal):
+        _ = slize.width
     parent._slices.add(slize)
     return slize

@@ -1,5 +1,3 @@
-import pytest
-
 import hdl21 as h
 from hdl21.flatten import flatten, is_flat, walk
 
@@ -110,7 +108,6 @@ def test_flatten_node_desc():
     )
 
 
-@pytest.mark.xfail(reason="FIXME: flatten with slices & concats")
 def test_flatten_with_slices():
     """Flatten a Module with slices"""
 
@@ -123,9 +120,15 @@ def test_flatten_with_slices():
         inv_1 = Inverter(vdd=vdd, vss=vss, vin=vin[1], vout=vout[1])  # type: ignore
 
     flattened = flatten(InvTwoPack)
+    for index in range(2):
+        for device in ("pmos", "nmos"):
+            inst = flattened.instances[f"inv_{index}:{device}"]
+            assert inst.conns["g"] == flattened.vin[index]
+            assert inst.conns["d"] == flattened.vout[index]
+    assert is_flat(flattened)
+    h.to_proto(flattened)
 
 
-@pytest.mark.xfail(reason="FIXME: flatten with slices & concats")
 def test_flatten_with_concat():
     """Test flattening a module with signal concatenations."""
 
@@ -147,3 +150,20 @@ def test_flatten_with_concat():
         nmos_array = NmosArray(d=h.Concat(s4, s2, s1, s0), g=g, vss=vss)
 
     flattened = flatten(M)
+    expected = [
+        flattened.s4[0],
+        flattened.s4[1],
+        flattened.s4[2],
+        flattened.s4[3],
+        flattened.s2[0],
+        flattened.s2[1],
+        flattened.s1,
+        flattened.s0,
+    ]
+    actual = [
+        flattened.instances[f"nmos_array:nmoses_{index}"].conns["d"]
+        for index in range(8)
+    ]
+    assert actual == expected
+    assert is_flat(flattened)
+    h.to_proto(flattened)

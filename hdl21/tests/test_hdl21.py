@@ -86,7 +86,6 @@ def test_generator1():
     assert isinstance(m.i, h.Signal)
 
 
-@pytest.mark.xfail(reason="Deprecated/ unimplemented Context feature")
 def test_generator2():
     @h.paramclass
     class P2:
@@ -360,7 +359,6 @@ def test_signal_slice2():
     assert sl.width == 2
 
 
-@pytest.mark.xfail(reason="#21 https://github.com/dan-fritchman/Hdl21/issues/21")
 def test_bad_slice1():
     # Test slicing error-cases
     with pytest.raises(TypeError):
@@ -839,12 +837,11 @@ def test_array_concat_conn():
     Parent.c.p5 = h.Concat(Parent.s5[3], Parent.s9)
 
 
-@pytest.mark.xfail(reason="FIXME: structural Slice/ Concat equality ")
 def test_slice_resolution():
     """Test resolutions of slice combinations"""
 
     # This is a very private import of the slice-resolver function
-    from hdl21.elab.elaborators.slices import _resolve_slice
+    from hdl21.elab.passes.slices import _resolve_slice
 
     # Slice of a Signal
     s = h.Signal(width=5)
