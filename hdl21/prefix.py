@@ -177,6 +177,21 @@ class Prefixed(BaseModel):
     prefix: Prefix = Field(default=Prefix.UNIT)
 
     @classmethod
+    def __get_pydantic_core_schema__(cls, source_type, handler):
+        """Accept scalar values when nested in Pydantic v2 models."""
+
+        from pydantic_core import core_schema
+
+        schema = handler(source_type)
+
+        def from_scalar(value):
+            if isinstance(value, (int, float, str, Decimal)):
+                return to_prefixed(value)
+            return value
+
+        return core_schema.no_info_before_validator_function(from_scalar, schema)
+
+    @classmethod
     def new(cls, number: Decimal, prefix: Prefix = Prefix.UNIT) -> "Prefixed":
         """Create a new Prefixed number.
         Alias for `Prefixed(number=number, prefix=prefix), and a (slight) shorthand

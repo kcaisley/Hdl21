@@ -22,12 +22,19 @@ def test_sim1():
     assert s.attrs == []
 
 
+def test_linear_sweep_is_hashable():
+    """Allow linear sweeps to be embedded in immutable generator parameters."""
+
+    assert isinstance(hash(LinearSweep(start=-0.75, stop=0.75, step=0.01)), int)
+
+
 @h.module
 class MyTb:
     # Create a sample testbench, particularly with enough stuff in it for `Noise` analysis.
     # I.e. a source instance and a non-ground Signal.
     VSS = h.Port()
     p = h.Signal()
+    bus = h.Signal(width=3)
     v = Vdc(dc=0 * m, ac=1000 * m)(p=p, n=VSS)
 
 
@@ -39,7 +46,11 @@ def test_sim2():
             Param(name="x", val=5),
             Dc(var="x", sweep=PointSweep([1]), name="mydc"),
             Ac(sweep=LogSweep(1e1, 1e10, 10), name="myac"),
-            Tran(tstop=11 * h.prefix.p, name="mytran"),
+            Tran(
+                tstop=11 * h.prefix.p,
+                name="mytran",
+                options={"strobeperiod": 1 * h.prefix.p, "strobeoutput": "strobeonly"},
+            ),
             Noise(
                 output=MyTb.p,
                 input_source=MyTb.v,
@@ -100,6 +111,26 @@ def test_simattrs():
     s.options(1e-9, name="reltol")
 
     to_proto(s)
+
+
+def test_save_top_level_signals_and_strings():
+    """Qualify top-level signals, expand buses, and preserve explicit paths."""
+
+    result = to_proto(
+        Sim(
+            tb=MyTb,
+            attrs=[Save([MyTb.p, MyTb.bus, "xtop.v:p", "xtop.xdut.internal"])],
+        )
+    )
+
+    assert result.ctrls[0].save.signal.split(",") == [
+        "xtop.p",
+        "xtop.bus_0",
+        "xtop.bus_1",
+        "xtop.bus_2",
+        "xtop.v:p",
+        "xtop.xdut.internal",
+    ]
 
 
 def test_sim_decorator():
@@ -172,7 +203,11 @@ def test_proto1():
             Param(name="x", val=5),
             Dc(var="x", sweep=PointSweep([1]), name="mydc"),
             Ac(sweep=LogSweep(1e1, 1e10, 10), name="myac"),
-            Tran(tstop=11 * h.prefix.p, name="mytran"),
+            Tran(
+                tstop=11 * h.prefix.p,
+                name="mytran",
+                options={"strobeperiod": 1 * h.prefix.p, "strobeoutput": "strobeonly"},
+            ),
             SweepAnalysis(
                 inner=[Tran(tstop=1, name="swptran")],
                 var="x",
@@ -201,6 +236,8 @@ def test_proto1():
 
     assert isinstance(p.pkg, vckt.Package)
     assert p.top == "test_sim.MyTb"
+    assert p.an[2].tran.ctrls[0].param.name == "strobeperiod"
+    assert p.an[2].tran.ctrls[1].param.name == "strobeoutput"
 
 
 def test_generator_sim():
@@ -315,7 +352,6 @@ def test_empty_sim2():
     assert not len(r.an)  # No analysis inputs, no analysis results
 
 
-@pytest.mark.xfail(reason="VLSIR #71 https://github.com/Vlsir/Vlsir/issues/71")
 def test_multi_sim():
     """Test multiple Sims in parallel"""
     s1 = Sim(tb=empty_tb(1), attrs=[])

@@ -16,7 +16,6 @@ import hdl21 as h
 import vlsir
 
 
-@pytest.mark.xfail(reason="#1 https://github.com/dan-fritchman/Hdl21/issues/1")
 def test_export_strides():
     """Test exporting connections with non-unit Slice-strides"""
 
@@ -186,6 +185,49 @@ def test_spectre_bit_voltage_source():
     assert "fall=3n" in text
     assert "rptstart=1" in text
     assert "rpttimes=0" in text
+
+
+def test_spectre_pwl_voltage_source_points():
+    """Netlist typed PWL points using Spectre's native syntax."""
+
+    @h.module
+    class PwlSourceTb:
+        out = h.Signal()
+        vss = h.Signal()
+        source = h.Vpwl(
+            wave=h.Pwl(points=((0, 0), (1 * h.prefix.n, 1.2), ("2n", "vmax")))
+        )(p=out, n=vss)
+
+    netlist = StringIO()
+    h.netlist(PwlSourceTb, netlist, fmt="spectre")
+
+    assert "type=pwl" in netlist.getvalue()
+    assert "wave=[0 0 1E-9 1.2 2n vmax]" in netlist.getvalue()
+
+
+def test_pwl_waveform_constructors():
+    """Build continuous, stepped, and uniform-staircase PWL waveforms."""
+
+    ramp = h.Pwl.ramp(start=0, stop=1.2, duration=2 * h.prefix.n, delay=1 * h.prefix.n)
+    assert tuple(float(item) for point in ramp.points for item in point) == pytest.approx(
+        (1e-9, 0.0, 3e-9, 1.2)
+    )
+
+    end_steps = h.Pwl.steps(values=(0, 1, 2), dwell=10, transition=2)
+    assert tuple(float(item) for point in end_steps.points for item in point) == pytest.approx(
+        (0, 0, 8, 0, 10, 1, 18, 1, 20, 2, 30, 2)
+    )
+    start_steps = h.Pwl.steps(values=(0, 1, 2), dwell=10, transition=2, transition_at="start")
+    assert tuple(float(item) for point in start_steps.points for item in point) == pytest.approx(
+        (0, 0, 10, 0, 12, 1, 20, 1, 22, 2, 30, 2)
+    )
+
+    staircase = h.Pwl.staircase(start=-2, stop=2, step=1, dwell=10, transition=2)
+    assert tuple(float(value) for _time, value in staircase.points[::2]) == pytest.approx((-2, -1, 0, 1, 2))
+    assert float(staircase.points[-1][1]) == pytest.approx(2)
+
+    with pytest.raises(ValueError, match="endpoints"):
+        h.Pwl.staircase(start=0, stop=1.05, step=0.1, dwell=1)
 
 
 def test_proto1():

@@ -5,7 +5,7 @@ Spice-Class Simulation Interface
 from textwrap import dedent
 from warnings import warn
 from enum import Enum
-from typing import Union, Any, Optional, List
+from typing import Union, Any, Optional, List, Dict
 from pathlib import Path
 from dataclasses import field
 
@@ -99,7 +99,7 @@ class Param:
     name: Optional[str] = None
 
 
-@datatype
+@datatype(frozen=True)
 class LinearSweep:
     """Linear Sweep"""
 
@@ -180,6 +180,8 @@ class Tran:
     tstep: Optional[Scalar] = None  # Optional time-step recommendation
     name: Optional[str] = None  # Optional analysis name
     noise: bool = False  # Enable noise in transient (Spectre: isnoisy=yes)
+    # Optional analysis-local parameters, e.g. Spectre strobeperiod and noisefmax.
+    options: Dict[str, Scalar] = field(default_factory=dict)
 
     @property
     def tp(self) -> AnalysisType:
@@ -264,7 +266,6 @@ class SaveMode(Enum):
 
     NONE = "none"
     ALL = "all"
-    SELECTED = "selected"
 
 
 # Union of "save-able" types
@@ -274,6 +275,7 @@ SaveTarget = Union[
     List[Signal],  # A list of `Signal`s
     str,  # A signal signal-name
     List[str],  # A list of signal-names
+    List[Union[Signal, str]],  # A mixed list of signals and explicit names
 ]
 
 

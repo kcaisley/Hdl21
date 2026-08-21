@@ -64,20 +64,24 @@ Summary of the content of the primitive library:
 
 # Std-Lib Imports
 import copy
-from enum import Enum
+import math
+from collections.abc import Sequence
 from dataclasses import replace
-from typing import Optional, Any, List, Type, Dict
+from enum import Enum
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
+from typing import Literal as TypingLiteral
 
 # PyPi Imports
 from pydantic.dataclasses import dataclass
 
 # Local imports
-from .default import Default
 from .call import param_call
-from .params import paramclass, Param, isparamclass, NoParams, _unique_name
-from .signal import Port, Signal, Visibility
+from .datatype import datatype
+from .default import Default
 from .instance import calls_instantiate
-from .scalar import Scalar
+from .params import NoParams, Param, _unique_name, isparamclass, paramclass
+from .scalar import Scalar, ToScalar
+from .signal import Port, Signal, Visibility
 
 
 class PrimitiveType(Enum):
@@ -535,14 +539,148 @@ Vpu = PulseVoltageSource
 Vpulse = PulseVoltageSource
 
 
+def _finite_float(value: ToScalar, *, name: str) -> float:
+    """Convert one finite numeric PWL construction argument."""
+
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError) as exc:
+        raise TypeError(f"PWL {name} must be numeric") from exc
+    if not math.isfinite(numeric):
+        raise ValueError(f"PWL {name} must be finite")
+    return numeric
+
+
+@datatype(frozen=True)
+class Pwl:
+    """Typed piecewise-linear waveform.
+
+    ``points`` contains ordered ``(time, value)`` pairs. The construction
+    methods cover the common continuous-ramp and stepped-ramp cases while
+    leaving direct point construction available for irregular waveforms.
+    """
+
+    points: Tuple[Tuple[Scalar, Scalar], ...]
+
+    @classmethod
+    def ramp(
+        cls,
+        *,
+        start: ToScalar,
+        stop: ToScalar,
+        duration: ToScalar,
+        delay: ToScalar = 0,
+    ) -> "Pwl":
+        """Create one continuous ramp after an optional delay."""
+
+        delay_value = _finite_float(delay, name="ramp delay")
+        duration_value = _finite_float(duration, name="ramp duration")
+        if delay_value < 0:
+            raise ValueError("PWL ramp delay must be non-negative")
+        if duration_value <= 0:
+            raise ValueError("PWL ramp duration must be positive")
+        return cls(
+            points=(
+                (delay_value, start),
+                (delay_value + duration_value, stop),
+            )
+        )
+
+    @classmethod
+    def steps(
+        cls,
+        *,
+        values: Sequence[ToScalar],
+        dwell: ToScalar,
+        transition: ToScalar = 0,
+        delay: ToScalar = 0,
+        transition_at: TypingLiteral["start", "end"] = "end",
+    ) -> "Pwl":
+        """Create fixed-duration levels with finite transitions.
+
+        ``dwell`` is the start-to-start spacing of successive values.
+        Transitions can occupy either the beginning or end of each interval.
+        """
+
+        levels = tuple(values)
+        if not levels:
+            raise ValueError("PWL steps require at least one value")
+        dwell_value = _finite_float(dwell, name="step dwell")
+        transition_value = _finite_float(transition, name="step transition")
+        delay_value = _finite_float(delay, name="step delay")
+        if dwell_value <= 0:
+            raise ValueError("PWL step dwell must be positive")
+        if transition_value < 0 or transition_value > dwell_value:
+            raise ValueError("PWL step transition must lie between zero and dwell")
+        if delay_value < 0:
+            raise ValueError("PWL step delay must be non-negative")
+        if transition_at not in {"start", "end"}:
+            raise ValueError("PWL step transition_at must be 'start' or 'end'")
+
+        def same_value(left: ToScalar, right: ToScalar) -> bool:
+            try:
+                return float(left) == float(right)
+            except (TypeError, ValueError):
+                return left == right
+
+        points = [(delay_value, levels[0])]
+        for index, level in enumerate(levels[1:], start=1):
+            previous = levels[index - 1]
+            if same_value(previous, level):
+                continue
+            boundary = delay_value + index * dwell_value
+            if transition_at == "start":
+                points.append((boundary, previous))
+                points.append((boundary + transition_value, level))
+            else:
+                points.append((boundary - transition_value, previous))
+                points.append((boundary, level))
+        points.append((delay_value + len(levels) * dwell_value, levels[-1]))
+        return cls(points=tuple(points))
+
+    @classmethod
+    def staircase(
+        cls,
+        *,
+        start: ToScalar,
+        stop: ToScalar,
+        step: ToScalar,
+        dwell: ToScalar,
+        transition: ToScalar = 0,
+        delay: ToScalar = 0,
+        transition_at: TypingLiteral["start", "end"] = "end",
+    ) -> "Pwl":
+        """Create an inclusive uniform staircase without cumulative error."""
+
+        start_value = _finite_float(start, name="staircase start")
+        stop_value = _finite_float(stop, name="staircase stop")
+        step_value = _finite_float(step, name="staircase step")
+        if step_value == 0:
+            raise ValueError("PWL staircase step must be non-zero")
+        span = stop_value - start_value
+        if span and (span > 0) != (step_value > 0):
+            raise ValueError("PWL staircase step must point from start toward stop")
+        step_count = span / step_value
+        if not math.isclose(step_count, round(step_count), rel_tol=0.0, abs_tol=1.0e-9):
+            raise ValueError("PWL staircase endpoints must align to its step")
+        levels = tuple(start_value + index * step_value for index in range(round(step_count) + 1))
+        return cls.steps(
+            values=levels,
+            dwell=dwell,
+            transition=transition,
+            delay=delay,
+            transition_at=transition_at,
+        )
+
+
 @paramclass
 class PwlVoltageSourceParams:
     """`PwlVoltageSource` Parameters"""
 
     wave = Param(
-        dtype=str,
+        dtype=Union[str, Pwl],
         default="",
-        desc="PWL waveform as time/value pairs, e.g. '0 0 1n 1.2'",
+        desc="PWL waveform as either a string or typed points",
     )
 
 

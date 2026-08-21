@@ -331,11 +331,29 @@ def export_primitive_params(params: Any) -> Dict[str, Optional[Prefixed]]:
         )
     if isinstance(params, PwlVoltageSourceParams):
         return dict(
-            wave=params.wave,
+            wave=export_pwl_wave(params.wave),
         )
 
     # For everything else, pass along the values name-by-name as a dictionary.
     return dictify_params(params)
+
+
+def export_pwl_wave(wave: Any) -> str:
+    """Export a PWL string or typed waveform to VLSIR's flat literal form."""
+
+    if isinstance(wave, str):
+        return wave
+    if not wave.points:
+        raise ValueError("PWL waveforms must contain at least one point")
+
+    def scalar_text(value: Scalar) -> str:
+        if isinstance(value, Literal):
+            return value.text
+        if isinstance(value, Prefixed):
+            return str(value.number * Decimal(10) ** value.prefix.value)
+        raise TypeError(f"Invalid PWL point value {value!r}")
+
+    return " ".join(scalar_text(value) for point in wave.points for value in point)
 
 
 def dictify_params(params: Any) -> Dict[str, Optional[Prefixed]]:

@@ -79,7 +79,7 @@ class SimProtoExporter:
         elif is_analysis(attr):
             self.inp.an.append(self.export_analysis(attr))
         elif is_control(attr):
-            self.inp.ctrls.append(export_control(attr))
+            self.inp.ctrls.append(export_control(attr, tb=self.sim.tb))
         else:
             raise TypeError(f"Invalid SimAttr: {attr}")
 
@@ -149,7 +149,10 @@ class SimProtoExporter:
             tstop=export_float(tran.tstop),
             tstep=export_float(tran.tstep),
             ic={},  # FIXME: initial conditions
-            ctrls=[],  # FIXME: analysis-specific controls
+            ctrls=[
+                vsp.Control(param=export_param(data.Param(name=name, val=value)))
+                for name, value in tran.options.items()
+            ],
             noise=tran.noise,  # Enable noise (Spectre: isnoisy=yes)
         )
 
@@ -281,7 +284,7 @@ def export_options(options: data.Options) -> vsp.SimOptions:
     return vsp.SimOptions(name=options.name, value=export_param_value(options.value))
 
 
-def export_control(ctrl: data.Control) -> vsp.Control:
+def export_control(ctrl: data.Control, *, tb=None) -> vsp.Control:
     """Export a `Control` element"""
     from ..proto import export_literal
 
@@ -290,7 +293,7 @@ def export_control(ctrl: data.Control) -> vsp.Control:
     if isinstance(ctrl, data.Lib):
         return vsp.Control(lib=export_lib(ctrl))
     if isinstance(ctrl, data.Save):
-        return vsp.Control(save=export_save(ctrl))
+        return vsp.Control(save=export_save(ctrl, tb=tb))
     if isinstance(ctrl, data.Meas):
         return vsp.Control(meas=export_meas(ctrl))
     if isinstance(ctrl, data.Param):
@@ -308,7 +311,9 @@ def export_lib(lib: data.Lib) -> vsp.LibInclude:
     return vsp.LibInclude(path=str(lib.path), section=lib.section)
 
 
-def export_save(save: data.Save) -> vsp.Save:
+def export_save(save: data.Save, *, tb=None) -> vsp.Save:
+    """Export a save target, qualifying top-level testbench signals."""
+
     if isinstance(save.targ, data.SaveMode):
         if save.targ == data.SaveMode.ALL:
             mode = vsp.Save.SaveMode.ALL
@@ -317,17 +322,24 @@ def export_save(save: data.Save) -> vsp.Save:
         else:
             raise ValueError
         return vsp.Save(mode=mode)
-    if isinstance(save.targ, Signal):
-        signal = save.targ.name
-    elif isinstance(save.targ, list) and all(isinstance(s, Signal) for s in save.targ):
-        signal = ",".join([s.name for s in save.targ])
-    elif isinstance(save.targ, str):
-        signal = save.targ
-    elif isinstance(save.targ, list) and all(isinstance(s, str) for s in save.targ):
-        signal = ",".join([s for s in save.targ])
-    else:
-        raise TypeError
-    return vsp.Save(signal=signal)
+    targets = save.targ if isinstance(save.targ, list) else [save.targ]
+    if not targets or not all(isinstance(target, (Signal, str)) for target in targets):
+        raise TypeError(f"Invalid save target {save.targ}")
+
+    names = []
+    for target in targets:
+        if isinstance(target, str):
+            names.append(target)
+            continue
+        if target.name is None:
+            raise ValueError("Cannot save an unnamed Signal")
+        if tb is not None and target._parent_module is not tb:
+            raise ValueError(f"Save target {target.name} is not a top-level testbench Signal")
+        if target.width == 1:
+            names.append(f"xtop.{target.name}")
+        else:
+            names.extend(f"xtop.{target.name}_{index}" for index in range(target.width))
+    return vsp.Save(signal=",".join(names))
 
 
 def export_meas(meas: data.Meas) -> vsp.Meas:
