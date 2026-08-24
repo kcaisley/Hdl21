@@ -63,7 +63,7 @@ def test_sim():
     opts = vsp.SimOptions(
         simulator=vsp.SupportedSimulators.NGSPICE,
         fmt=vsp.ResultFormat.SIM_DATA,
-        rundir="./scratch",
+        rundir="./build/ihp_hdl21",
     )
     rv = Sim.run(opts)
     assert isinstance(rv, vsp.sim_data.SimResult)
@@ -109,7 +109,7 @@ def test_sim_inv():
     opts = vsp.SimOptions(
         simulator=vsp.SupportedSimulators.NGSPICE,
         fmt=vsp.ResultFormat.SIM_DATA,
-        rundir="./scratch",
+        rundir="./build/ihp_hdl21",
     )
     rv = Sim.run(opts)
     assert isinstance(rv, vsp.sim_data.SimResult)
@@ -147,7 +147,7 @@ def test_sim_mosfets_lv():
     opts = vsp.SimOptions(
         simulator=vsp.SupportedSimulators.NGSPICE,
         fmt=vsp.ResultFormat.SIM_DATA,
-        rundir="./scratch",
+        rundir="./build/ihp_hdl21",
     )
 
     rv = Sim.run(opts)
@@ -182,7 +182,7 @@ def test_sim_mosfets_hv():
     opts = vsp.SimOptions(
         simulator=vsp.SupportedSimulators.NGSPICE,
         fmt=vsp.ResultFormat.SIM_DATA,
-        rundir="./scratch",
+        rundir="./build/ihp_hdl21",
     )
 
     rv = Sim.run(opts)
@@ -220,7 +220,7 @@ def test_sim_resistors():
     opts = vsp.SimOptions(
         simulator=vsp.SupportedSimulators.NGSPICE,
         fmt=vsp.ResultFormat.SIM_DATA,
-        rundir="./scratch",
+        rundir="./build/ihp_hdl21",
     )
 
     rv = Sim.run(opts)
@@ -258,7 +258,7 @@ def test_sim_capacitors():
     opts = vsp.SimOptions(
         simulator=vsp.SupportedSimulators.NGSPICE,
         fmt=vsp.ResultFormat.SIM_DATA,
-        rundir="./scratch",
+        rundir="./build/ihp_hdl21",
     )
 
     rv = Sim.run(opts)
@@ -302,7 +302,7 @@ def test_sim_hbt():
     opts = vsp.SimOptions(
         simulator=vsp.SupportedSimulators.NGSPICE,
         fmt=vsp.ResultFormat.SIM_DATA,
-        rundir="./scratch",
+        rundir="./build/ihp_hdl21",
     )
 
     rv = Sim.run(opts)
@@ -339,7 +339,7 @@ def test_sim_pnp():
     opts = vsp.SimOptions(
         simulator=vsp.SupportedSimulators.NGSPICE,
         fmt=vsp.ResultFormat.SIM_DATA,
-        rundir="./scratch",
+        rundir="./build/ihp_hdl21",
     )
 
     rv = Sim.run(opts)
@@ -392,7 +392,7 @@ def test_sim_transient():
     opts = vsp.SimOptions(
         simulator=vsp.SupportedSimulators.NGSPICE,
         fmt=vsp.ResultFormat.SIM_DATA,
-        rundir="./scratch",
+        rundir="./build/ihp_hdl21",
     )
 
     rv = Sim.run(opts)

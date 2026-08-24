@@ -39,7 +39,7 @@ def main():
     opts = vsp.SimOptions(
         simulator=vsp.SupportedSimulators.NGSPICE,
         fmt=vsp.ResultFormat.SIM_DATA,  # Get Python-native result types
-        rundir="./scratch",  # Set the working directory for the simulation. Uses a temporary directory by default.
+        rundir="./build/hdl21/mos_sim",
     )
     if not vsp.ngspice.available():
         print("ngspice is not available. Skipping simulation.")

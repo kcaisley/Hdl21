@@ -56,7 +56,7 @@ def test_sim():
     opts = vsp.SimOptions(
         simulator=vsp.SupportedSimulators.NGSPICE,
         fmt=vsp.ResultFormat.SIM_DATA,
-        rundir="./scratch",
+        rundir="./build/sky130_hdl21",
     )
     rv = Sim.run(opts)
     assert isinstance(rv, vsp.sim_data.SimResult)
@@ -101,7 +101,7 @@ def test_sim_inv():
     opts = vsp.SimOptions(
         simulator=vsp.SupportedSimulators.NGSPICE,
         fmt=vsp.ResultFormat.SIM_DATA,
-        rundir="./scratch",
+        rundir="./build/sky130_hdl21",
     )
     rv = Sim.run(opts)
     assert isinstance(rv, vsp.sim_data.SimResult)
@@ -209,7 +209,7 @@ def test_sim_mosfets():
     opts = vsp.SimOptions(
         simulator=vsp.SupportedSimulators.NGSPICE,
         fmt=vsp.ResultFormat.SIM_DATA,
-        rundir="./scratch",
+        rundir="./build/sky130_hdl21",
     )
 
     rv = Sim.run(opts)
@@ -279,7 +279,7 @@ def test_sim_genres():
     opts = vsp.SimOptions(
         simulator=vsp.SupportedSimulators.NGSPICE,
         fmt=vsp.ResultFormat.SIM_DATA,
-        rundir="./scratch",
+        rundir="./build/sky130_hdl21",
     )
 
     rv = Sim.run(opts)
@@ -342,7 +342,7 @@ def test_sim_precres():
     opts = vsp.SimOptions(
         simulator=vsp.SupportedSimulators.NGSPICE,
         fmt=vsp.ResultFormat.SIM_DATA,
-        rundir="./scratch",
+        rundir="./build/sky130_hdl21",
     )
 
     rv = Sim.run(opts)
@@ -411,7 +411,7 @@ def test_sim_bjt():
     opts = vsp.SimOptions(
         simulator=vsp.SupportedSimulators.NGSPICE,
         fmt=vsp.ResultFormat.SIM_DATA,
-        rundir="./scratch",
+        rundir="./build/sky130_hdl21",
     )
 
     rv = Sim.run(opts)
@@ -489,7 +489,7 @@ def test_sim_diode():
     opts = vsp.SimOptions(
         simulator=vsp.SupportedSimulators.NGSPICE,
         fmt=vsp.ResultFormat.SIM_DATA,
-        rundir="./scratch",
+        rundir="./build/sky130_hdl21",
     )
 
     rv = Sim.run(opts)
@@ -547,7 +547,7 @@ def test_sim_gencap():
     opts = vsp.SimOptions(
         simulator=vsp.SupportedSimulators.NGSPICE,
         fmt=vsp.ResultFormat.SIM_DATA,
-        rundir="./scratch",
+        rundir="./build/sky130_hdl21",
     )
 
     rv = Sim.run(opts)
@@ -654,7 +654,7 @@ def test_sim_devcap():
     opts = vsp.SimOptions(
         simulator=vsp.SupportedSimulators.NGSPICE,
         fmt=vsp.ResultFormat.SIM_DATA,
-        rundir="./scratch",
+        rundir="./build/sky130_hdl21",
     )
 
     rv = Sim.run(opts)

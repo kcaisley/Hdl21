@@ -79,7 +79,7 @@ def test_sim_mosfets():
     opts = vsp.SimOptions(
         simulator=vsp.SupportedSimulators.NGSPICE,
         fmt=vsp.ResultFormat.SIM_DATA,
-        rundir="./scratch",
+        rundir="./build/gf180_hdl21",
     )
 
     rv = Sim.run(opts)
@@ -136,7 +136,7 @@ def test_sim_resistors():
     opts = vsp.SimOptions(
         simulator=vsp.SupportedSimulators.NGSPICE,
         fmt=vsp.ResultFormat.SIM_DATA,
-        rundir="./scratch",
+        rundir="./build/gf180_hdl21",
     )
 
     rv = Sim.run(opts)
@@ -207,7 +207,7 @@ def test_sim_capacitors():
     opts = vsp.SimOptions(
         simulator=vsp.SupportedSimulators.NGSPICE,
         fmt=vsp.ResultFormat.SIM_DATA,
-        rundir="./scratch",
+        rundir="./build/gf180_hdl21",
     )
 
     rv = Sim.run(opts)
@@ -247,7 +247,7 @@ def test_sim_diodes():
     opts = vsp.SimOptions(
         simulator=vsp.SupportedSimulators.NGSPICE,
         fmt=vsp.ResultFormat.SIM_DATA,
-        rundir="./scratch",
+        rundir="./build/gf180_hdl21",
     )
 
     rv = Sim.run(opts)
@@ -292,7 +292,7 @@ def test_sim_bjt():
     opts = vsp.SimOptions(
         simulator=vsp.SupportedSimulators.NGSPICE,
         fmt=vsp.ResultFormat.SIM_DATA,
-        rundir="./scratch",
+        rundir="./build/gf180_hdl21",
     )
 
     rv = Sim.run(opts)
