@@ -233,6 +233,8 @@ class MonteCarlo:
     npts: int  # Number of points
     seed: Optional[int] = None  # Optional random-number seed
     name: Optional[str] = None  # Optional analysis name
+    # Simulator options on the Monte Carlo statement, e.g. Spectre's `savefamilyplots="yes"`
+    options: Dict[str, Scalar] = field(default_factory=dict)
 
     @property
     def tp(self) -> AnalysisType:

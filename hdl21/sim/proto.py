@@ -228,7 +228,10 @@ class SimProtoExporter:
             npts=monte.npts,
             seed=0 if monte.seed is None else monte.seed,
             an=[self.export_analysis(a) for a in monte.inner],
-            ctrls=[],  # FIXME: analysis-specific controls
+            ctrls=[
+                vsp.Control(param=export_param(data.Param(name=name, val=value)))
+                for name, value in monte.options.items()
+            ],
         )
 
     def export_custom_analysis(

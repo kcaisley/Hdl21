@@ -384,3 +384,13 @@ def test_multi_sim_error():
         s4 = Sim(tb=empty_tb(4), attrs=[])
 
         r = sim(to_proto([s1, s2, s3, s4]), SimOptions(fmt=ResultFormat.VLSIR_PROTO))
+
+
+def test_monte_carlo_options_export_as_its_controls():
+    """A Monte Carlo's simulator options (Spectre's savefamilyplots, say) travel as its controls."""
+
+    monte = MonteCarlo(inner=[Op(name="op")], npts=4, seed=7, name="mc", options={"savefamilyplots": "yes"})
+    inp = h.sim.to_proto(Sim(tb=empty_tb(), attrs=[monte]))
+    exported = next(an.monte for an in inp.an if an.WhichOneof("an") == "monte")
+    assert exported.npts == 4 and exported.seed == 7
+    assert [(ctrl.param.name, ctrl.param.value.literal) for ctrl in exported.ctrls] == [("savefamilyplots", "yes")]
