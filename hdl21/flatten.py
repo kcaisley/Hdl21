@@ -65,7 +65,8 @@ def walk(
         for src_port_name, sig in inst.conns.items():
             new_conns[src_port_name] = _map_connection(sig, m, parents, conns)
 
-        if isinstance(inst.of, h.PrimitiveCall):
+        # a primitive or an external module (a PDK's device, a library cell) is a leaf, as `is_flat` has it
+        if isinstance(inst.of, (h.PrimitiveCall, h.ExternalModuleCall)):
             yield FlattenedInstance(inst, new_parents, new_conns)
         else:
             yield from walk(inst.of, new_parents, new_conns)
